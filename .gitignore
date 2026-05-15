@@ -1,0 +1,53 @@
+# macOS
+.DS_Store
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# IDE — local-only
+*.local.json
+.idea/
+
+# Claude Code local settings
+.claude/
+
+# ─────────────────────────────────────────────
+# mobile/ — Expo + TypeScript
+# ─────────────────────────────────────────────
+mobile/node_modules/
+mobile/.expo/
+mobile/dist/
+mobile/web-build/
+mobile/expo-env.d.ts
+mobile/.kotlin/
+mobile/.metro-health-check*
+mobile/npm-debug.*
+mobile/yarn-debug.*
+mobile/yarn-error.*
+mobile/*.tsbuildinfo
+mobile/app-example/
+*.orig.*
+
+# Generated native folders (CNG — never commit)
+mobile/ios/
+mobile/android/
+
+# ─────────────────────────────────────────────
+# mac/ — Swift + Xcode
+# ─────────────────────────────────────────────
+mac/**/xcuserdata/
+mac/**/*.xcuserstate
+mac/**/DerivedData/
+mac/**/build/
+mac/**/.swiftpm/
+mac/**/Packages/
+mac/**/Package.resolved
+mac/**/*.xcworkspace/xcuserdata/
