@@ -1,24 +1,33 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
-
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
+import { RemoteClientProvider } from '@/src/lib/RemoteClientContext';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const theme = colorScheme === 'dark' ? DarkTheme : DefaultTheme;
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <RemoteClientProvider>
+        <ThemeProvider value={theme}>
+          <Stack>
+            <Stack.Screen
+              name="index"
+              options={{ title: 'Подключение' }}
+            />
+            <Stack.Screen
+              name="control"
+              options={{ title: 'MacRemote', headerBackVisible: false }}
+            />
+          </Stack>
+          <StatusBar style="auto" />
+        </ThemeProvider>
+      </RemoteClientProvider>
+    </GestureHandlerRootView>
   );
 }

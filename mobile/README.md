@@ -1,50 +1,58 @@
-# Welcome to your Expo app 👋
+# MacRemote
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Mobile companion app for controlling a MacBook over the local network through a WebSocket/REST companion server (the server is maintained outside of this repo).
 
-## Get started
+Built with Expo SDK 54, React Native 0.81, Expo Router, TypeScript and CNG (managed-config — no `ios/` / `android/` folders).
 
-1. Install dependencies
+## Requirements
 
-   ```bash
-   npm install
-   ```
+- Node.js + npm
+- A development build of the app on a real iOS/Android device or a simulator/emulator.
+  **Expo Go is not supported** — `app.json` includes native configuration (`NSAllowsLocalNetworking`, `usesCleartextTraffic`) that Expo Go cannot pick up.
+- The phone/emulator and the Mac running the companion server must share the same Wi-Fi network.
 
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Run the dev server (Metro)
 
 ```bash
-npm run reset-project
+npm install
+npx expo start
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Then open the app from a development build on your device or simulator. From the Connect screen, enter the Mac's LAN IP, the companion server's port (default `7777`), and the token configured on the server.
 
-## Learn more
+## Build a development build
 
-To learn more about developing your project with Expo, look at the following resources:
+Pick whichever toolchain you already use:
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+- **EAS (cloud)** — recommended for shipping to a real device:
+  ```bash
+  npx eas build --profile development --platform ios
+  npx eas build --profile development --platform android
+  ```
+- **Local native run** (requires Xcode / Android Studio toolchains):
+  ```bash
+  npx expo run:ios
+  npx expo run:android
+  ```
 
-## Join the community
+`npx expo run:*` will generate native `ios/` / `android/` folders on the fly via CNG — **don't commit them**. Native config stays in `app.json`.
 
-Join our community of developers creating universal apps.
+## Project layout
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+- `app/` — Expo Router routes (Stack: `index` = Connect, `control` = main screen).
+- `src/types/` — shared TypeScript types (`ConnectionSettings`, `CommandName`, command result types, wire envelopes).
+- `src/lib/` — business logic: `RemoteClient` (WS + REST fallback), `storage` (typed AsyncStorage wrapper), `RemoteClientContext` (React provider).
+- `src/components/` — `Card`, `StatusDot`, `VolumeSlider` (gesture-driven, no extra slider lib).
+- `components/`, `hooks/`, `constants/` — the themed primitives and color/scheme helpers kept from the Expo template.
+
+## Useful scripts
+
+- `npm run lint` — ESLint via `expo lint`.
+- `npx tsc --noEmit` — type-check the whole project.
+- `npx expo export --platform ios|android` — sanity-check that the bundle builds.
+
+## Notes
+
+- Both `ws://` and `http://` to local hosts are explicitly enabled via `app.json` (iOS `NSAllowsLocalNetworking`, Android `usesCleartextTraffic`). This is scoped to local networking only.
+- When testing against the Android emulator, the host machine is reachable as `10.0.2.2` (not `localhost`). On iOS Simulator, `localhost` works.
+- Settings (host/port/token) are persisted in AsyncStorage under `@macremote/settings` — there is no `.env`.
