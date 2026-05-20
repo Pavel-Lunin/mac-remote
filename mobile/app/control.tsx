@@ -1,4 +1,3 @@
-import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -20,7 +19,6 @@ import { VolumeSlider } from '@/src/components/VolumeSlider';
 import { useRemoteClient } from '@/src/lib/RemoteClientContext';
 import { clearSettings } from '@/src/lib/storage';
 import type {
-  ScreenshotResult,
   SetVolumeArgs,
   OpenAppArgs,
   SpotifyState,
@@ -47,7 +45,6 @@ export default function ControlScreen() {
   const [volume, setVolume] = useState<number>(0);
   const [volumeKnown, setVolumeKnown] = useState(false);
   const [spotify, setSpotify] = useState<SpotifyState | null>(null);
-  const [screenshot, setScreenshot] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [busyAction, setBusyAction] = useState<string | null>(null);
 
@@ -170,13 +167,6 @@ export default function ControlScreen() {
       if (client === null) return;
       const args: OpenAppArgs = { name };
       await client.send<unknown>('openApp', args);
-    });
-
-  const handleScreenshot = () =>
-    runAction('screenshot', async () => {
-      if (client === null) return;
-      const res = await client.send<ScreenshotResult>('screenshot');
-      setScreenshot(res.dataUri);
     });
 
   const handleLock = () =>
@@ -357,21 +347,6 @@ export default function ControlScreen() {
           </View>
         </Card>
 
-        <Card title="Скриншот">
-          <ActionButton
-            label="Сделать снимок"
-            onPress={handleScreenshot}
-            disabled={disabled}
-          />
-          {screenshot !== null ? (
-            <Image
-              source={{ uri: screenshot }}
-              style={styles.screenshot}
-              contentFit="contain"
-            />
-          ) : null}
-        </Card>
-
         <TouchableOpacity
           onPress={handleDisconnect}
           style={[styles.disconnect, { backgroundColor: dangerBg }]}
@@ -496,12 +471,6 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  screenshot: {
-    width: '100%',
-    aspectRatio: 16 / 10,
-    borderRadius: 10,
-    marginTop: 8,
   },
   disconnect: {
     marginTop: 8,

@@ -34,8 +34,7 @@ export type CommandName =
   | 'openApp'
   | 'notify'
   | 'sleep'
-  | 'lockScreen'
-  | 'screenshot';
+  | 'lockScreen';
 
 export type SystemInfo = {
   hostname: string;
@@ -57,10 +56,6 @@ export type SpotifyState = {
   state?: string;
   track?: string;
   artist?: string;
-};
-
-export type ScreenshotResult = {
-  dataUri: string;
 };
 
 export type SetVolumeArgs = {
