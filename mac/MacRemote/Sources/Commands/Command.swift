@@ -13,7 +13,6 @@ enum CommandName: String, Codable, CaseIterable, Sendable {
     case mediaPlayPause
     case mediaNext
     case mediaPrev
-    case spotifyState
     case openApp
     case notify
     case sleep

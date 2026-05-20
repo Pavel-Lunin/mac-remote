@@ -1,3 +1,5 @@
+import AppKit
+import CoreGraphics
 import Foundation
 import os
 
@@ -105,37 +107,52 @@ func cmdMuteToggle() async throws -> JSONValue {
 
 // MARK: - Media
 
+/// Системные media-keys через CGEventPost. AppleScript-вариант `key code 16/17/18`
+/// падает на локализованных macOS (русский парсер AppleScript ломается на
+/// числовой константе после "key code"). CGEventPost — низкоуровневый и
+/// независим от локали; требует Accessibility, как и AppleScript-варианты.
+///
+/// Коды берутся из <IOKit/hidsystem/ev_keymap.h>:
+///   NX_KEYTYPE_PLAY = 16, NX_KEYTYPE_FAST = 17, NX_KEYTYPE_REWIND = 18.
+
+private let NX_KEYTYPE_PLAY: Int32 = 16
+private let NX_KEYTYPE_FAST: Int32 = 17
+private let NX_KEYTYPE_REWIND: Int32 = 18
+
+private func postMediaKey(_ keyCode: Int32) {
+    func send(_ down: Bool) {
+        let flags = NSEvent.ModifierFlags.init(rawValue: 0xa00)  // NX_SECONDARYFN+command-ish payload
+        let data1 = Int((keyCode << 16) | ((down ? 0xa : 0xb) << 8))
+        guard let event = NSEvent.otherEvent(
+            with: .systemDefined,
+            location: .zero,
+            modifierFlags: flags,
+            timestamp: 0,
+            windowNumber: 0,
+            context: nil,
+            subtype: 8,         // NX_SUBTYPE_AUX_CONTROL_BUTTONS
+            data1: data1,
+            data2: -1
+        ) else { return }
+        event.cgEvent?.post(tap: .cghidEventTap)
+    }
+    send(true)
+    send(false)
+}
+
 func cmdMediaPlayPause() async throws -> JSONValue {
-    _ = try await runOsascript("tell application \"System Events\" to key code 16 using {function down}")
+    postMediaKey(NX_KEYTYPE_PLAY)
     return .null
 }
 
 func cmdMediaNext() async throws -> JSONValue {
-    _ = try await runOsascript("tell application \"System Events\" to key code 17 using {function down}")
+    postMediaKey(NX_KEYTYPE_FAST)
     return .null
 }
 
 func cmdMediaPrev() async throws -> JSONValue {
-    _ = try await runOsascript("tell application \"System Events\" to key code 18 using {function down}")
+    postMediaKey(NX_KEYTYPE_REWIND)
     return .null
-}
-
-// MARK: - Spotify
-
-func cmdSpotifyState() async throws -> JSONValue {
-    let runningRaw = try await runOsascript("tell application \"System Events\" to (name of processes) contains \"Spotify\"")
-    let isRunning = runningRaw.lowercased() == "true"
-    if !isRunning {
-        return .object(["running": .bool(false)])
-    }
-    let state = (try? await runOsascript("tell application \"Spotify\" to player state as string")) ?? ""
-    let track = (try? await runOsascript("tell application \"Spotify\" to name of current track as string")) ?? ""
-    let artist = (try? await runOsascript("tell application \"Spotify\" to artist of current track as string")) ?? ""
-    var obj: [String: JSONValue] = ["running": .bool(true)]
-    if !state.isEmpty { obj["state"] = .string(state) }
-    if !track.isEmpty { obj["track"] = .string(track) }
-    if !artist.isEmpty { obj["artist"] = .string(artist) }
-    return .object(obj)
 }
 
 // MARK: - Open app

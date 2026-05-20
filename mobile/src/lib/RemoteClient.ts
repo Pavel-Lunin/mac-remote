@@ -137,13 +137,14 @@ export class RemoteClient {
 
   private async sendOverRest<T>(cmd: CommandName, args: unknown): Promise<T> {
     const url = `http://${this.host}:${this.port}/cmd`;
+    const id = this.nextId();
     const res = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${this.token}`,
       },
-      body: JSON.stringify({ cmd, args }),
+      body: JSON.stringify({ id, cmd, args }),
     });
     if (!res.ok) {
       throw new Error(`rest http ${res.status}`);

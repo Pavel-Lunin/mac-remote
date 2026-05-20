@@ -53,7 +53,6 @@ Bearer-токен, выдаваемый Mac-приложением при пер
 | `mediaPlayPause` | —                               | `null`                                                       |
 | `mediaNext`      | —                               | `null`                                                       |
 | `mediaPrev`      | —                               | `null`                                                       |
-| `spotifyState`   | —                               | `SpotifyState`                                               |
 | `openApp`        | `{ name: string }`              | `null`                                                       |
 | `notify`         | `{ title?: string, message?: string }` | `null`                                                |
 | `sleep`          | —                               | `null`                                                       |
@@ -64,7 +63,6 @@ Bearer-токен, выдаваемый Mac-приложением при пер
 
 - `SystemInfo`: `{ hostname, platform, cpuModel, cpuCount, memTotalGB, memFreeGB, battery, uptime }` — все поля строкового или числового скаляра, формат человекочитаемый.
 - `VolumeResult`: `{ volume: number }` — 0..100, целое. Mute эмулируется отдельным полем или `volume === 0`; см. реализацию.
-- `SpotifyState`: `{ running: boolean, state?: "playing" | "paused" | "stopped", track?: string, artist?: string }`. Если Spotify не запущен — `{ running: false }`, остальные поля отсутствуют.
 
 ### Wire envelopes
 
@@ -91,7 +89,7 @@ Bearer-токен, выдаваемый Mac-приложением при пер
 
 - **Mac-сервер**: SwiftUI menu-bar app + Vapor (Swift) поверх SwiftNIO. WebSocket — `app.webSocket("ws") { req, ws in … }`; REST — `app.post("cmd") { req in … }`; health — `app.get("health") { … }`.
 - **Команды macOS** реализованы через `osascript` (`Process` + `/usr/bin/osascript -e`) и небольшой allowlist shell-утилит (`pmset`, `uptime`, `sysctl`, `open`). Никаких произвольных команд серверу извне выполнить нельзя.
-- **Permissions** на стороне macOS: Accessibility (для media-keys через System Events) — пользователь даёт вручную; Automation (Spotify, System Events) — система запрашивает при первой команде. Без этих разрешений соответствующие команды вернут ошибку с понятным текстом, остальные продолжат работать.
+- **Permissions** на стороне macOS: Accessibility (для media-keys через `CGEventPost`) — пользователь даёт вручную; Automation (System Events) — система запрашивает при первой osascript-команде. Без этих разрешений соответствующие команды вернут ошибку с понятным текстом, остальные продолжат работать.
 - **Формат ошибок (бизнес-логика)**: при любой ошибке выполнения (osascript non-zero exit, нет разрешения, неизвестная команда, невалидные args) сервер отвечает `{ id, ok: false, error }` с HTTP 500 (REST) или таким же JSON через WS.
 - **Формат ошибок (транспортные)**: ошибки до запуска команды отдаются стандартным Vapor-форматом `{ "error": true, "reason": "<message>" }` с HTTP-кодом — `401` для невалидного/отсутствующего Bearer-токена, `400` для невалидного JSON в теле. У них нет `id`, потому что мы не успели распарсить запрос. Клиент должен различать форматы по HTTP-коду: 200/500 → парсить как `WireResponse`, 401/400 → парсить как `{error,reason}`.
 - WS-ошибки авторизации отдаются на этапе HTTP upgrade (403 от Vapor, до открытия WebSocket); после успешного upgrade всё уходит в тело `WireResponse`.

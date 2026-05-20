@@ -28,7 +28,6 @@ final class CommandRunner {
         case .mediaPlayPause: return try await cmdMediaPlayPause()
         case .mediaNext:      return try await cmdMediaNext()
         case .mediaPrev:      return try await cmdMediaPrev()
-        case .spotifyState:   return try await cmdSpotifyState()
         case .openApp:        return try await cmdOpenApp(args: args)
         case .notify:         return try await cmdNotify(args: args)
         case .sleep:          return try await cmdSleep()

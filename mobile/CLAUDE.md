@@ -32,7 +32,7 @@ No test setup yet.
 - **Platform-specific files**: `.ios.tsx` / `.web.ts` suffix convention (e.g. `components/ui/icon-symbol.ios.tsx`, `hooks/use-color-scheme.web.ts`). Metro resolves per platform.
 - **New Architecture** (`newArchEnabled`) and **React Compiler** (`reactCompiler` experiment) are on — avoid manual memoization patterns the compiler handles.
 - **Business logic in `src/`**, separate from the route tree:
-  - `src/types/index.ts` — shared types: `ConnectionSettings`, `ConnectionStatus`, `CommandName` (union of every server command), per-command arg/result types (`SystemInfo`, `VolumeResult`, `SpotifyState`, `ScreenshotResult`, `SetVolumeArgs`, `OpenAppArgs`, `NotifyArgs`), and wire envelopes `WireRequest` / `WireResponse`.
+  - `src/types/index.ts` — shared types: `ConnectionSettings`, `ConnectionStatus`, `CommandName` (union of every server command), per-command arg/result types (`SystemInfo`, `VolumeResult`, `SetVolumeArgs`, `OpenAppArgs`, `NotifyArgs`, `DiscoveredService`, `DiscoveryStatus`), and wire envelopes `WireRequest` / `WireResponse`. Single source of truth for the command registry — `../docs/protocol.md`.
   - `src/lib/storage.ts` — typed AsyncStorage wrapper for `ConnectionSettings` under key `@macremote/settings` (`loadSettings`/`saveSettings`/`clearSettings`); `loadSettings` swallows parse errors and validates shape before returning.
   - `src/lib/RemoteClient.ts` — `RemoteClient` class: WebSocket to `ws://{host}:{port}/ws?token=...` with ~2s reconnect backoff, in-flight request map with ~8s timeouts, REST fallback via `POST /cmd` (`Authorization: Bearer {token}`) when the socket isn't open, and `health()` against `GET /health`. Status changes are reported through the optional `onStatus` callback. No `any` — incoming WS payloads are validated as `WireResponse` before dispatch.
   - `src/lib/RemoteClientContext.tsx` — React provider (`RemoteClientProvider`) holding the active `RemoteClient` and current `ConnectionStatus`, plus `useRemoteClient()` hook. The provider owns the client lifecycle: changing `settings` tears down the previous client and connects a new one; `setActiveSettings(null)` disconnects.
@@ -41,26 +41,7 @@ No test setup yet.
 
 ## Server command contract
 
-The companion server speaks these commands (consumed via `client.send<T>(cmd, args)`):
-
-| Command          | Args                       | Result type        |
-|------------------|----------------------------|--------------------|
-| `ping`           | —                          | `unknown` (truthy) |
-| `systemInfo`     | —                          | `SystemInfo`       |
-| `getVolume`      | —                          | `VolumeResult`     |
-| `setVolume`      | `SetVolumeArgs {value}`    | `VolumeResult`     |
-| `muteToggle`     | —                          | `VolumeResult`     |
-| `mediaPlayPause` | —                          | `unknown`          |
-| `mediaNext`      | —                          | `unknown`          |
-| `mediaPrev`      | —                          | `unknown`          |
-| `spotifyState`   | —                          | `SpotifyState`     |
-| `openApp`        | `OpenAppArgs {name}`       | `unknown`          |
-| `notify`         | `NotifyArgs {title?,message?}` | `unknown`      |
-| `sleep`          | —                          | `unknown`          |
-| `lockScreen`     | —                          | `unknown`          |
-| `screenshot`     | —                          | `ScreenshotResult` |
-
-Wire envelope is `WireRequest` → `WireResponse` over WS; REST uses the same `{cmd, args}` body with `Authorization: Bearer {token}` and returns the same envelope.
+The command registry and wire envelope live in [../docs/protocol.md](../docs/protocol.md) — do not duplicate the table here. `CommandName` in `src/types/index.ts` must match it. REST `POST /cmd` body is `{ id, cmd, args }` (same shape as WS), with `Authorization: Bearer {token}`; response is `WireResponse`.
 
 ## Config
 

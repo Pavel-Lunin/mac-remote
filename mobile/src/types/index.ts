@@ -30,7 +30,6 @@ export type CommandName =
   | 'mediaPlayPause'
   | 'mediaNext'
   | 'mediaPrev'
-  | 'spotifyState'
   | 'openApp'
   | 'notify'
   | 'sleep'
@@ -49,13 +48,6 @@ export type SystemInfo = {
 
 export type VolumeResult = {
   volume: number;
-};
-
-export type SpotifyState = {
-  running: boolean;
-  state?: string;
-  track?: string;
-  artist?: string;
 };
 
 export type SetVolumeArgs = {

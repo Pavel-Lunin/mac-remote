@@ -21,14 +21,12 @@ import { clearSettings } from '@/src/lib/storage';
 import type {
   SetVolumeArgs,
   OpenAppArgs,
-  SpotifyState,
   SystemInfo,
   VolumeResult,
 } from '@/src/types';
 
 const QUICK_APPS: { label: string; name: string }[] = [
   { label: 'Safari', name: 'Safari' },
-  { label: 'Spotify', name: 'Spotify' },
   { label: 'Terminal', name: 'Terminal' },
   { label: 'VS Code', name: 'Visual Studio Code' },
   { label: 'Finder', name: 'Finder' },
@@ -44,7 +42,6 @@ export default function ControlScreen() {
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
   const [volume, setVolume] = useState<number>(0);
   const [volumeKnown, setVolumeKnown] = useState(false);
-  const [spotify, setSpotify] = useState<SpotifyState | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [busyAction, setBusyAction] = useState<string | null>(null);
 
@@ -63,15 +60,13 @@ export default function ControlScreen() {
     if (client === null) return;
     setRefreshing(true);
     try {
-      const [info, vol, sp] = await Promise.all([
+      const [info, vol] = await Promise.all([
         client.send<SystemInfo>('systemInfo'),
         client.send<VolumeResult>('getVolume'),
-        client.send<SpotifyState>('spotifyState'),
       ]);
       setSystemInfo(info);
       setVolume(vol.volume);
       setVolumeKnown(true);
-      setSpotify(sp);
     } catch (err) {
       reportError('Не удалось обновить данные', err);
     } finally {
@@ -158,8 +153,6 @@ export default function ControlScreen() {
     runAction(cmd, async () => {
       if (client === null) return;
       await client.send<unknown>(cmd);
-      const sp = await client.send<SpotifyState>('spotifyState');
-      setSpotify(sp);
     });
 
   const handleOpenApp = (name: string) =>
@@ -296,25 +289,6 @@ export default function ControlScreen() {
               disabled={disabled}
             />
           </View>
-          {spotify !== null ? (
-            <View style={styles.spotifyBlock}>
-              {spotify.running ? (
-                <>
-                  <ThemedText type="defaultSemiBold">
-                    {spotify.track ?? '—'}
-                  </ThemedText>
-                  <ThemedText style={{ color: iconColor }}>
-                    {spotify.artist ?? ''}
-                    {spotify.state !== undefined ? ` · ${spotify.state}` : ''}
-                  </ThemedText>
-                </>
-              ) : (
-                <ThemedText style={{ color: iconColor }}>
-                  Spotify не запущен
-                </ThemedText>
-              )}
-            </View>
-          ) : null}
         </Card>
 
         <Card title="Быстрый запуск">
@@ -458,10 +432,6 @@ const styles = StyleSheet.create({
   gridItem: {
     flexBasis: '30%',
     flexGrow: 1,
-  },
-  spotifyBlock: {
-    marginTop: 6,
-    gap: 2,
   },
   actionBtn: {
     flex: 1,

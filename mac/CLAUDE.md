@@ -49,7 +49,7 @@ Xcode использует **File System Synchronized Groups** (Xcode 16+) — �
 
 1. **Local Network** — система сама показывает prompt при первом `NetService.publish()`. Нажать Allow, иначе Bonjour не работает.
 2. **Accessibility** — нужно для media-команд (`mediaPlayPause/Next/Prev` эмулируются через System Events). Выдать вручную в System Settings → Privacy & Security → Accessibility. В UI приложения есть кнопка «Open Settings», она открывает нужный раздел.
-3. **Automation** — система запрашивает первый раз, когда команда дёргает Spotify / System Events. Просто нажать OK.
+3. **Automation** — система запрашивает первый раз, когда osascript-команда дёргает System Events (например, mute). Просто нажать OK.
 
 ## Известные ограничения
 

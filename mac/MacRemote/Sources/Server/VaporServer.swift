@@ -128,10 +128,10 @@ final class VaporServer {
             },
             onUpgrade: { req, ws in
                 log.notice("WS client connected")
+                // Используем async-вариант onText: websocket-kit сам стартует Task,
+                // привязанный к EventLoop сокета, и ws.send() из него безопасно.
                 ws.onText { ws, text in
-                    Task {
-                        await VaporServer.handleWSText(text, ws: ws, runner: runner, log: log)
-                    }
+                    await VaporServer.handleWSText(text, ws: ws, runner: runner, log: log)
                 }
                 ws.onClose.whenComplete { _ in
                     log.notice("WS client disconnected")
