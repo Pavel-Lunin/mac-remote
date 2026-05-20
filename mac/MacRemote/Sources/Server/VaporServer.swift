@@ -16,6 +16,7 @@ final class VaporServer {
     private let port: Int
     private let commandRunner: CommandRunner
     private let tokenStore: TokenStore
+    private let bonjour: BonjourPublisher
     private var app: Application?
     private var runTask: Task<Void, Error>?
 
@@ -23,6 +24,7 @@ final class VaporServer {
         self.port = port
         self.commandRunner = commandRunner
         self.tokenStore = tokenStore
+        self.bonjour = BonjourPublisher()
     }
 
     /// Запускает сервер. Не блокирует — внутренний `Task` крутит цикл NIO.
@@ -50,11 +52,16 @@ final class VaporServer {
             }
         }
         log.notice("Vapor listening on port \(self.port, privacy: .public)")
+
+        // Объявляем сервис в Bonjour: имя Mac + наш порт.
+        let bonjourName = Host.current().localizedName ?? "MacBook"
+        bonjour.publish(port: UInt16(port), name: bonjourName)
     }
 
     /// Корректная остановка: shutdown Vapor, отмена Task'а.
     func stop() async {
         log.notice("stopping Vapor")
+        bonjour.unpublish()
         if let app {
             // shutdown — sync метод, после него execute() завершится.
             try? await app.asyncShutdown()
