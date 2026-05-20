@@ -1,14 +1,9 @@
 import SwiftUI
 
 struct StatusPanelView: View {
-    @StateObject private var viewModel: StatusViewModel
+    @ObservedObject var coordinator: AppCoordinator
     @State private var tokenRevealed = false
     @State private var showingRegenerateConfirm = false
-
-    init(viewModel: StatusViewModel? = nil) {
-        // В превью можно прокинуть свою ViewModel; в проде создаём из глобального TokenStore.
-        _viewModel = StateObject(wrappedValue: viewModel ?? StatusViewModel(tokenStore: TokenStore()))
-    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -34,13 +29,21 @@ struct StatusPanelView: View {
 
     @ViewBuilder
     private var statusLine: some View {
-        switch viewModel.status {
+        switch coordinator.status {
+        case .starting:
+            statusBadge(color: .yellow, text: "Server starting…")
         case .running(let port):
             statusBadge(color: .green, text: "Server running on port \(port)")
         case .stopped:
             statusBadge(color: .red, text: "Server stopped")
         case .error(let message):
-            statusBadge(color: .orange, text: "Error: \(message)")
+            VStack(alignment: .leading, spacing: 6) {
+                statusBadge(color: .orange, text: "Error: \(message)")
+                Button("Restart server") {
+                    Task { await coordinator.restart() }
+                }
+                .controlSize(.small)
+            }
         }
     }
 
@@ -57,7 +60,7 @@ struct StatusPanelView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Token").font(.caption).foregroundStyle(.secondary)
             HStack {
-                Text(tokenRevealed ? viewModel.token : String(repeating: "•", count: 16))
+                Text(tokenRevealed ? coordinator.token : String(repeating: "•", count: 16))
                     .font(.system(.body, design: .monospaced))
                     .lineLimit(1)
                     .truncationMode(.tail)
@@ -67,7 +70,7 @@ struct StatusPanelView: View {
                 }
                 .controlSize(.small)
                 Button("Copy") {
-                    viewModel.copyTokenToPasteboard()
+                    coordinator.copyTokenToPasteboard()
                 }
                 .controlSize(.small)
             }
@@ -82,7 +85,7 @@ struct StatusPanelView: View {
                 isPresented: $showingRegenerateConfirm
             ) {
                 Button("Regenerate", role: .destructive) {
-                    viewModel.regenerateToken()
+                    coordinator.regenerateToken()
                     tokenRevealed = true
                 }
                 Button("Cancel", role: .cancel) {}
@@ -98,13 +101,13 @@ struct StatusPanelView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Permissions").font(.caption).foregroundStyle(.secondary)
             HStack {
-                Image(systemName: viewModel.accessibilityGranted ? "checkmark.circle.fill" : "xmark.circle.fill")
-                    .foregroundStyle(viewModel.accessibilityGranted ? .green : .red)
+                Image(systemName: coordinator.accessibilityGranted ? "checkmark.circle.fill" : "xmark.circle.fill")
+                    .foregroundStyle(coordinator.accessibilityGranted ? .green : .red)
                 Text("Accessibility")
                 Spacer()
-                if !viewModel.accessibilityGranted {
+                if !coordinator.accessibilityGranted {
                     Button("Open Settings") {
-                        viewModel.openAccessibilitySettings()
+                        coordinator.openAccessibilitySettings()
                     }
                     .controlSize(.small)
                 }
@@ -119,7 +122,7 @@ struct StatusPanelView: View {
 
     private var quitButton: some View {
         Button {
-            viewModel.quit()
+            Task { await coordinator.quit() }
         } label: {
             Label("Quit MacRemote", systemImage: "power")
         }
@@ -128,6 +131,6 @@ struct StatusPanelView: View {
 }
 
 #Preview {
-    StatusPanelView()
+    StatusPanelView(coordinator: AppCoordinator())
         .frame(width: 320)
 }

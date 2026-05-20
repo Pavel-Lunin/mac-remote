@@ -30,7 +30,12 @@ final class VaporServer {
     /// Запускает сервер. Не блокирует — внутренний `Task` крутит цикл NIO.
     /// Throws, если порт занят (DI это ловит и пробует следующий — см. Этап 10).
     func start() async throws {
-        let app = try await Application.make(.development)
+        // По умолчанию Vapor парсит ProcessInfo.processInfo.arguments как CLI-команды
+        // (`serve`, `routes`, `migrate`, …). Xcode при Debug-запуске передаёт свои
+        // флаги типа `-NSDocumentRevisionsDebugMode`, и Vapor падает с
+        // "Unknown command". Передаём фиксированные args, чтобы он всегда запускал serve.
+        let env = Environment(name: "development", arguments: ["MacRemote", "serve"])
+        let app = try await Application.make(env)
         app.http.server.configuration.hostname = "0.0.0.0"
         app.http.server.configuration.port = port
 

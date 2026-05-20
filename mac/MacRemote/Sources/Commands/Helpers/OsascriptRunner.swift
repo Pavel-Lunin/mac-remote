@@ -25,6 +25,22 @@ private let osascriptLog = Logger(subsystem: "com.macremote.app", category: "com
 private let osascriptPath = "/usr/bin/osascript"
 private let osascriptTimeout: TimeInterval = 10
 
+/// Потокобезопасный однократный признак «continuation уже resume'нут».
+/// Гарантирует, что continuation вызвана не более одного раза в гонке
+/// `terminationHandler` vs таймера.
+private final class ResumeState: @unchecked Sendable {
+    private let lock = NSLock()
+    private var resumed = false
+
+    func markResumed() -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        if resumed { return false }
+        resumed = true
+        return true
+    }
+}
+
 /// Запускает AppleScript-строку через `/usr/bin/osascript -e <script>`.
 /// Возвращает stdout (trimmed). Бросает `OsascriptError` при ненулевом exit,
 /// таймауте или ошибке запуска процесса.
@@ -57,22 +73,18 @@ func runProcess(
     process.standardError = stderrPipe
 
     return try await withCheckedThrowingContinuation { continuation in
-        var didResume = false
-        let resumeLock = NSLock()
+        let state = ResumeState()
 
-        func resumeOnce(_ result: Result<String, Error>) {
-            resumeLock.lock()
-            defer { resumeLock.unlock() }
-            if didResume { return }
-            didResume = true
+        @Sendable func resumeOnce(_ result: Result<String, Error>) {
+            guard state.markResumed() else { return }
             continuation.resume(with: result)
         }
 
         process.terminationHandler = { proc in
             let stdout = (try? stdoutPipe.fileHandleForReading.readToEnd()) ?? Data()
             let stderr = (try? stderrPipe.fileHandleForReading.readToEnd()) ?? Data()
-            let stdoutString = String(data: stdout ?? Data(), encoding: .utf8) ?? ""
-            let stderrString = String(data: stderr ?? Data(), encoding: .utf8) ?? ""
+            let stdoutString = String(data: stdout, encoding: .utf8) ?? ""
+            let stderrString = String(data: stderr, encoding: .utf8) ?? ""
             if proc.terminationStatus == 0 {
                 let trimmed = stdoutString.trimmingCharacters(in: .whitespacesAndNewlines)
                 resumeOnce(.success(trimmed))
