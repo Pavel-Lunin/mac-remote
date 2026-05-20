@@ -10,8 +10,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Один git-репозиторий, две связанные кодовые базы и общая документация. Корневой `git` (см. `.git/` в корне) — единственный источник правды; внутри подпроектов своего git'а нет.
 
-- [mac/](mac/) — Mac-приложение на SwiftUI (companion-сервер для приёма команд). **Пока пусто** — Swift-кода и Xcode-проекта ещё нет.
-- [mobile/](mobile/) — мобильный клиент на Expo + TypeScript (iOS/Android). Полностью реализован; детали — в [mobile/CLAUDE.md](mobile/CLAUDE.md).
+- [mac/](mac/) — Mac-приложение: SwiftUI menu-bar + Vapor HTTP/WS сервер + Bonjour. Реализовано; детали — в [mac/CLAUDE.md](mac/CLAUDE.md).
+- [mobile/](mobile/) — мобильный клиент на Expo + TypeScript (iOS/Android). Реализован; детали — в [mobile/CLAUDE.md](mobile/CLAUDE.md).
 - [docs/protocol.md](docs/protocol.md) — единственный источник истины для протокола: транспорт, service discovery (Bonjour `_macremote._tcp.`), команды.
 
 ## Архитектурные принципы
@@ -43,8 +43,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Команды
 
 - Запустить мобильное приложение: `cd mobile && npx expo start`
-- Открыть Mac-приложение: `open mac/MacRemote.xcodeproj` (далее в Xcode) — *появится после создания Xcode-проекта в `mac/`*
+- Открыть Mac-приложение: `open mac/MacRemote.xcodeproj` (далее в Xcode → Cmd+R)
+- Сборка Mac CLI: `cd mac && xcodebuild -project MacRemote.xcodeproj -scheme MacRemote -configuration Debug -destination 'platform=macOS' build`
 - Проверить типы мобильного: `cd mobile && npx tsc --noEmit`
 - Линт мобильного: `cd mobile && npm run lint`
+- Логи Mac-приложения: `/usr/bin/log show --predicate 'subsystem == "com.macremote.app"' --info --last 5m`
 
-Дальнейшие команды для мобильного клиента (EAS-сборки, локальный native run, пр.) описаны в [mobile/CLAUDE.md](mobile/CLAUDE.md). Не дублировать их здесь.
+Подробности — в [mac/CLAUDE.md](mac/CLAUDE.md) и [mobile/CLAUDE.md](mobile/CLAUDE.md). Не дублировать их здесь.
