@@ -36,6 +36,7 @@ No test setup yet.
   - `src/lib/storage.ts` — typed AsyncStorage wrapper for `ConnectionSettings` under key `@macremote/settings` (`loadSettings`/`saveSettings`/`clearSettings`); `loadSettings` swallows parse errors and validates shape before returning.
   - `src/lib/RemoteClient.ts` — `RemoteClient` class: WebSocket to `ws://{host}:{port}/ws?token=...` with ~2s reconnect backoff, in-flight request map with ~8s timeouts, REST fallback via `POST /cmd` (`Authorization: Bearer {token}`) when the socket isn't open, and `health()` against `GET /health`. Status changes are reported through the optional `onStatus` callback. No `any` — incoming WS payloads are validated as `WireResponse` before dispatch.
   - `src/lib/RemoteClientContext.tsx` — React provider (`RemoteClientProvider`) holding the active `RemoteClient` and current `ConnectionStatus`, plus `useRemoteClient()` hook. The provider owns the client lifecycle: changing `settings` tears down the previous client and connects a new one; `setActiveSettings(null)` disconnects.
+  - `src/lib/useServiceDiscovery.ts` — React-хук поверх `react-native-zeroconf`. Сканирует `_macremote._tcp.` в домене `local.`, возвращает `{ services, status, error, start, stop }`. Один инстанс `Zeroconf` хранится в `useRef`, при размонтировании компонент снимает слушатели, вызывает `zc.stop()` и `removeDeviceListeners()`. Скан не запускается автоматически — `start()` вызывается явно из UI. Payload события `remove` библиотеки — **строка `name`** (а не объект), удаляем сервис по совпадению `service.name === name`. ID для UI формируется как `host:port`, чтобы тот же сервер не задвоился при повторном `resolved`.
   - `src/components/Card.tsx`, `StatusDot.tsx`, `VolumeSlider.tsx` — UI primitives. `VolumeSlider` is a gesture-driven slider built on `react-native-gesture-handler`'s `Gesture.Pan()` — **do not** add a separate slider library.
 
 ## Server command contract
@@ -69,6 +70,9 @@ Wire envelope is `WireRequest` → `WireResponse` over WS; REST uses the same `{
   - iOS: `infoPlist.NSAppTransportSecurity.NSAllowsLocalNetworking = true` + `NSLocalNetworkUsageDescription`.
   - Android: `usesCleartextTraffic = true`.
   These are scoped to local networking — don't widen them to global cleartext.
+- Service discovery (Bonjour/mDNS):
+  - iOS: `infoPlist.NSBonjourServices = ["_macremote._tcp"]`. Without this entry, iOS silently refuses to resolve our service type. The service-type list is closed at build time — adding a new service later requires a rebuild.
+  - Android: `permissions` includes `ACCESS_WIFI_STATE`, `CHANGE_WIFI_MULTICAST_STATE`, `INTERNET`. Without `CHANGE_WIFI_MULTICAST_STATE` NSD won't see anything on real devices.
 
 ## Pitfalls
 
@@ -76,4 +80,5 @@ Wire envelope is `WireRequest` → `WireResponse` over WS; REST uses the same `{
 - **Android emulator hostname**: from the AVD, the host Mac is `10.0.2.2`, not `localhost`. iOS Simulator can use `localhost`.
 - **Don't edit `ios/` / `android/` by hand** — they shouldn't exist in this repo. Native config goes through `app.json` (CNG). If `expo run:*` creates them locally, treat them as ephemeral build output.
 - **Don't bump package versions manually**. Install with `npx expo install <pkg>` so SDK 54-compatible versions are picked.
+- **`react-native-zeroconf` requires a fresh native build**. It's a native module, so any new install or change to `NSBonjourServices` / Android `permissions` in `app.json` means the previous dev build is stale. Re-run `npx expo run:ios|android` or `npx eas build --profile development` and reinstall on the device. Expo Go doesn't ship this module — service discovery silently does nothing there.
 - **Gesture handler root**: `GestureHandlerRootView` wraps the whole app in `app/_layout.tsx`. Adding gesture-based components elsewhere requires no extra setup, but removing that wrapper will silently break `VolumeSlider`.

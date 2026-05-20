@@ -12,7 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - [mac/](mac/) — Mac-приложение на SwiftUI (companion-сервер для приёма команд). **Пока пусто** — Swift-кода и Xcode-проекта ещё нет.
 - [mobile/](mobile/) — мобильный клиент на Expo + TypeScript (iOS/Android). Полностью реализован; детали — в [mobile/CLAUDE.md](mobile/CLAUDE.md).
-- [docs/protocol.md](docs/protocol.md) — единственный источник истины для протокола. **Пока пустой файл-плейсхолдер** — при первом изменении протокола его нужно наполнить.
+- [docs/protocol.md](docs/protocol.md) — единственный источник истины для протокола: транспорт, service discovery (Bonjour `_macremote._tcp.`), команды.
 
 ## Архитектурные принципы
 

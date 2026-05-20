@@ -14,8 +14,13 @@
         "NSAppTransportSecurity": {
           "NSAllowsLocalNetworking": true
         },
-        "NSLocalNetworkUsageDescription": "MacRemote connects to your Mac on the local network."
-      }
+        "NSLocalNetworkUsageDescription": "MacRemote discovers your Mac on the local network.",
+        "NSBonjourServices": [
+          "_macremote._tcp",
+          "_macremote._tcp"
+        ]
+      },
+      "bundleIdentifier": "com.anonymous.mac-remote"
     },
     "android": {
       "adaptiveIcon": {
@@ -26,7 +31,12 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "usesCleartextTraffic": true
+      "usesCleartextTraffic": true,
+      "permissions": [
+        "android.permission.ACCESS_WIFI_STATE",
+        "android.permission.CHANGE_WIFI_MULTICAST_STATE",
+        "android.permission.INTERNET"
+      ]
     },
     "web": {
       "output": "static",

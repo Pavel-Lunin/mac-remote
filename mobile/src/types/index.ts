@@ -4,6 +4,16 @@ export type ConnectionSettings = {
   token: string;
 };
 
+export type DiscoveredService = {
+  id: string;
+  name: string;
+  host: string;
+  port: number;
+  addresses?: string[];
+};
+
+export type DiscoveryStatus = 'idle' | 'scanning' | 'stopped' | 'error';
+
 export type ConnectionStatus =
   | 'idle'
   | 'connecting'

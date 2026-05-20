@@ -17,13 +17,16 @@ import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { RemoteClient } from '@/src/lib/RemoteClient';
 import { useRemoteClient } from '@/src/lib/RemoteClientContext';
+import { useServiceDiscovery } from '@/src/lib/useServiceDiscovery';
 import { loadSettings, saveSettings } from '@/src/lib/storage';
+import type { DiscoveredService } from '@/src/types';
 
 const DEFAULT_PORT = 7777;
 
 export default function ConnectScreen() {
   const router = useRouter();
   const { setActiveSettings } = useRemoteClient();
+  const discovery = useServiceDiscovery();
 
   const [host, setHost] = useState('');
   const [port, setPort] = useState(String(DEFAULT_PORT));
@@ -37,6 +40,14 @@ export default function ConnectScreen() {
   const inputBg = useThemeColor(
     { light: '#F4F5F7', dark: '#1F2123' },
     'background',
+  );
+  const cardBg = useThemeColor(
+    { light: '#FFFFFF', dark: '#1A1C1E' },
+    'background',
+  );
+  const errorColor = useThemeColor(
+    { light: '#C81E1E', dark: '#FF6B6B' },
+    'text',
   );
 
   useEffect(() => {
@@ -63,6 +74,19 @@ export default function ConnectScreen() {
       </ThemedView>
     );
   }
+
+  const handlePickService = (svc: DiscoveredService): void => {
+    setHost(svc.host);
+    setPort(String(svc.port));
+  };
+
+  const toggleScan = (): void => {
+    if (discovery.status === 'scanning') {
+      discovery.stop();
+    } else {
+      discovery.start();
+    }
+  };
 
   const handleConnect = async () => {
     const trimmedHost = host.trim();
@@ -106,6 +130,9 @@ export default function ConnectScreen() {
     }
   };
 
+  const scanning = discovery.status === 'scanning';
+  const hasServices = discovery.services.length > 0;
+
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
@@ -117,75 +144,129 @@ export default function ConnectScreen() {
       >
         <ThemedView style={styles.container}>
           <ThemedText type="title">MacRemote</ThemedText>
-          <ThemedText style={{ color: iconColor }}>
-            Введите адрес companion-сервера на вашем Mac.
-          </ThemedText>
 
-          <View style={styles.field}>
-            <ThemedText type="defaultSemiBold">Host</ThemedText>
-            <TextInput
-              value={host}
-              onChangeText={setHost}
-              placeholder="192.168.1.10"
-              placeholderTextColor={iconColor}
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType="url"
-              editable={!busy}
-              style={[
-                styles.input,
-                { color: textColor, backgroundColor: inputBg, borderColor: iconColor },
-              ]}
-            />
-          </View>
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <ThemedText type="defaultSemiBold">Найденные устройства</ThemedText>
+              <TouchableOpacity
+                onPress={toggleScan}
+                disabled={busy}
+                style={[styles.scanButton, { borderColor: tint }]}
+              >
+                <ThemedText style={{ color: tint }}>
+                  {scanning ? 'Остановить' : 'Искать'}
+                </ThemedText>
+              </TouchableOpacity>
+            </View>
 
-          <View style={styles.field}>
-            <ThemedText type="defaultSemiBold">Port</ThemedText>
-            <TextInput
-              value={port}
-              onChangeText={setPort}
-              placeholder={String(DEFAULT_PORT)}
-              placeholderTextColor={iconColor}
-              keyboardType="number-pad"
-              editable={!busy}
-              style={[
-                styles.input,
-                { color: textColor, backgroundColor: inputBg, borderColor: iconColor },
-              ]}
-            />
-          </View>
+            {scanning && !hasServices ? (
+              <View style={styles.scanInfo}>
+                <ActivityIndicator color={tint} />
+                <ThemedText style={{ color: iconColor }}>
+                  Ищу MacBook в сети…
+                </ThemedText>
+              </View>
+            ) : null}
 
-          <View style={styles.field}>
-            <ThemedText type="defaultSemiBold">Token</ThemedText>
-            <TextInput
-              value={token}
-              onChangeText={setToken}
-              placeholder="секрет из конфига сервера"
-              placeholderTextColor={iconColor}
-              autoCapitalize="none"
-              autoCorrect={false}
-              secureTextEntry
-              editable={!busy}
-              style={[
-                styles.input,
-                { color: textColor, backgroundColor: inputBg, borderColor: iconColor },
-              ]}
-            />
-          </View>
-
-          <TouchableOpacity
-            onPress={handleConnect}
-            disabled={busy}
-            style={[styles.button, { backgroundColor: tint, opacity: busy ? 0.6 : 1 }]}
-          >
-            {busy ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <ThemedText type="defaultSemiBold" lightColor="#fff" darkColor="#fff">
-                Подключиться
+            {discovery.status === 'error' && discovery.error !== null ? (
+              <ThemedText style={{ color: errorColor }}>
+                Ошибка поиска: {discovery.error}
               </ThemedText>
-            )}
-          </TouchableOpacity>
+            ) : null}
+
+            {!scanning && !hasServices && discovery.status !== 'error' ? (
+              <ThemedText style={{ color: iconColor }}>
+                Нажмите «Искать», чтобы найти Mac в локальной сети.
+              </ThemedText>
+            ) : null}
+
+            {discovery.services.map((svc) => (
+              <TouchableOpacity
+                key={svc.id}
+                onPress={() => handlePickService(svc)}
+                disabled={busy}
+                style={[styles.serviceCard, { backgroundColor: cardBg, borderColor: iconColor }]}
+              >
+                <ThemedText type="defaultSemiBold">{svc.name}</ThemedText>
+                <ThemedText style={{ color: iconColor }}>
+                  {svc.host}:{svc.port}
+                </ThemedText>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <View style={styles.section}>
+            <ThemedText type="defaultSemiBold">Подключение</ThemedText>
+            <ThemedText style={{ color: iconColor }}>
+              Выберите устройство выше или введите адрес вручную.
+            </ThemedText>
+
+            <View style={styles.field}>
+              <ThemedText type="defaultSemiBold">Host</ThemedText>
+              <TextInput
+                value={host}
+                onChangeText={setHost}
+                placeholder="192.168.1.10"
+                placeholderTextColor={iconColor}
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="url"
+                editable={!busy}
+                style={[
+                  styles.input,
+                  { color: textColor, backgroundColor: inputBg, borderColor: iconColor },
+                ]}
+              />
+            </View>
+
+            <View style={styles.field}>
+              <ThemedText type="defaultSemiBold">Port</ThemedText>
+              <TextInput
+                value={port}
+                onChangeText={setPort}
+                placeholder={String(DEFAULT_PORT)}
+                placeholderTextColor={iconColor}
+                keyboardType="number-pad"
+                editable={!busy}
+                style={[
+                  styles.input,
+                  { color: textColor, backgroundColor: inputBg, borderColor: iconColor },
+                ]}
+              />
+            </View>
+
+            <View style={styles.field}>
+              <ThemedText type="defaultSemiBold">Token</ThemedText>
+              <TextInput
+                value={token}
+                onChangeText={setToken}
+                placeholder="секрет из конфига сервера"
+                placeholderTextColor={iconColor}
+                autoCapitalize="none"
+                autoCorrect={false}
+                secureTextEntry
+                editable={!busy}
+                style={[
+                  styles.input,
+                  { color: textColor, backgroundColor: inputBg, borderColor: iconColor },
+                ]}
+              />
+            </View>
+
+            <TouchableOpacity
+              onPress={handleConnect}
+              disabled={busy}
+              style={[styles.button, { backgroundColor: tint, opacity: busy ? 0.6 : 1 }]}
+            >
+              {busy ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <ThemedText type="defaultSemiBold" lightColor="#fff" darkColor="#fff">
+                  Подключиться
+                </ThemedText>
+              )}
+            </TouchableOpacity>
+          </View>
         </ThemedView>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -199,11 +280,36 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    gap: 16,
+    gap: 20,
   },
   centered: {
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  section: {
+    gap: 12,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  scanButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  scanInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  serviceCard: {
+    padding: 14,
+    borderRadius: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+    gap: 4,
   },
   field: {
     gap: 6,
